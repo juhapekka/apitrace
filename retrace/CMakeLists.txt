@@ -42,8 +42,8 @@ add_library (retrace_common STATIC
 
 if (ANDROID)
 ##
-# if waffle is found eglretracer will be build for Android.
-    find_package (Waffle)
+# if Android source tree is found eglretracer will be build for Android.
+    set (Android_Source_Tree "$ENV{OUT}")
 endif ()
 
 target_link_libraries (retrace_common
@@ -145,20 +145,48 @@ if (ENABLE_EGL AND X11_FOUND AND NOT WIN32 AND NOT APPLE)
     install (TARGETS eglretrace RUNTIME DESTINATION bin) 
 endif ()
 
-if (ENABLE_EGL AND ANDROID AND Waffle_FOUND)
+if (ENABLE_EGL AND ANDROID AND Android_Source_Tree)
+
+#    LINK_DIRECTORIES( $ENV{OUT}/obj/lib )
+    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} $ENV{OUT}/obj/lib)
+    
+    
+    message("${CMAKE_LIBRARY_PATH}")
+    
     add_executable (eglretrace
-        glws_waffle.cpp
+        glws_egl_android.cpp
     )
 
     add_dependencies (eglretrace glproc)
-    include_directories (${Waffle_INCLUDE_DIR})
+
+    include_directories (AFTER SYSTEM 
+        $ENV{ANDROID_BUILD_TOP}/frameworks/native/include 
+        $ENV{ANDROID_BUILD_TOP}/hardware/libhardware/include
+        $ENV{ANDROID_BUILD_TOP}/system/core/include
+    )
+    
+#    LINK_DIRECTORIES($ENV{OUT}/obj/lib)
+#find_library (utils
+#            NAMES "utils"
+#            PATHS "$ENV{OUT}/obj/lib" REQUIRED NO_CMAKE_FIND_ROOT_PATH NO_DEFAULT_PATH )
+
+##find_library (gui
+#            NAMES "gui"
+#            PATHS "$ENV{OUT}/obj/lib" REQUIRED NO_CMAKE_FIND_ROOT_PATH NO_DEFAULT_PATH )
+
+    
+    
+get_directory_property(OUT_VAR LINK_DIRECTORIES)
+message(STATUS "DIR: ${OUT_VAR}")  
 
     target_link_libraries (eglretrace
         retrace_common
         glretrace_common
         glproc_egl
         dl
-        ${Waffle_LIBRARY}
+        EGL
+        utils
+        gui
     )
     target_link_libraries (eglretrace ${proc_LIBRARY})
     install (TARGETS eglretrace RUNTIME DESTINATION bin)
